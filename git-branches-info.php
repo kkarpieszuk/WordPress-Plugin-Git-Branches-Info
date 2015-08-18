@@ -6,10 +6,10 @@
  * Author URI: http://muzungu.pl
  * Version: 0.1
  * Text Domain: git-branch-plugin
- * 
+ *
  * License: GNU General Public License v2 or later
  * License URI: http://www.gnu.org/licenses/gpl-2.0.html
- * 
+ *
  */
 
 class Git_Branches_Client {
@@ -19,18 +19,25 @@ class Git_Branches_Client {
 	}
 
 	function filter_plugin_row_meta($plugin_meta, $plugin_file, $plugin_data, $status) {
+		$additional_infos = array();
 
 		$git_head_file = $this->get_git_head_file_content( $plugin_file );
 
 		if ($git_head_file) {
 			$branch_name = $this->get_branch_name($git_head_file);
-
 			if ($branch_name) {
-				$plugin_meta = $this->add_branch_info_to_version($branch_name, $plugin_meta);
+				$additional_infos[] = $this->branch_name_string($branch_name);
 			}
-
 		}
 
+		$git_fetch_head_file_time = $this->get_git_fetch_head_file_time( $plugin_file );
+		if ($git_fetch_head_file_time) {
+			$additional_infos[] = $this->file_time_string($git_fetch_head_file_time);
+		} else if ($git_fetch_head_file_time === null) {
+			$additional_infos[] = __("never pulled", "git-branch-plugin");
+		}
+
+		$plugin_meta = $this->add_branch_info_to_version($additional_infos, $plugin_meta);
 
 		return $plugin_meta;
 	}
@@ -46,7 +53,34 @@ class Git_Branches_Client {
 
 	}
 
+	function get_git_fetch_head_file_time( $plugin_name ) {
+		$head_fetch_file_path = $this->construct_fetch_head_path( $plugin_name );
+		if (!is_file($head_fetch_file_path)) {
+			$time = null;
+		} else {
+			$time = filemtime($head_fetch_file_path);
+		}
+
+		return  $time;
+	}
+
 	private function construct_head_path($plugin_name) {
+		$git_dir_name = $this->git_directory_path($plugin_name);
+
+		$head_file_path = $git_dir_name . DIRECTORY_SEPARATOR . 'HEAD';
+
+		return $head_file_path;
+	}
+
+	function construct_fetch_head_path( $plugin_name ) {
+		$git_dir_name = $this->git_directory_path($plugin_name);
+
+		$file_path = $git_dir_name . DIRECTORY_SEPARATOR . 'FETCH_HEAD';
+
+		return $file_path;
+	}
+
+	function git_directory_path( $plugin_name ) {
 		$plugin_name = WP_PLUGIN_DIR . DIRECTORY_SEPARATOR .$plugin_name;
 
 		$parts = explode(DIRECTORY_SEPARATOR, $plugin_name);
@@ -56,9 +90,7 @@ class Git_Branches_Client {
 
 		$git_dir_name = rtrim($dir_name, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . ".git";
 
-		$head_file_path = $git_dir_name . DIRECTORY_SEPARATOR . 'HEAD';
-		
-		return $head_file_path;
+		return $git_dir_name;
 	}
 
 	function get_branch_name($file_content) {
@@ -75,20 +107,73 @@ class Git_Branches_Client {
 		return $branch_name;
 	}
 
-	function add_branch_info_to_version($branch_name, $plugin_meta) {
-		foreach ($plugin_meta as $index => $meta) {
+	function add_branch_info_to_version($additional_infos, $plugin_meta) {
+		if (!empty($additional_infos)) {
+			foreach ($plugin_meta as $index => $meta) {
 
-			$version_text = __( 'Version %s' );
-			$version_match = str_replace("%s", "[0-9].", $version_text);
-			$match = "/" . $version_match . "/";
+				$version_text = __( 'Version %s' );
+				$version_match = str_replace("%s", "[0-9].", $version_text);
+				$match = "/" . $version_match . "/";
 
-			if (preg_match($match, $meta, $matches) ) {
-				$plugin_meta[$index] = $meta . " (" . __("Git branch:", "git-branch-plugin") . " " . $branch_name . ")";
+				if (preg_match($match, $meta, $matches) ) {
+					foreach($additional_infos as $info) {
+							$plugin_meta[$index] .= ", " . $info;
+					}
+				}
 			}
 		}
 
 		return $plugin_meta;
 	}
+
+	function branch_name_string( $branch_name ) {
+		return __("git branch:", "git-branch-plugin") . " " . $branch_name;
+	}
+
+	function file_time_string($git_fetch_head_file_time) {
+		$time_elapsed = $this->time_elapsed_string($git_fetch_head_file_time);
+		$date = date('l jS \of F Y h:i:s A', $git_fetch_head_file_time);
+		return "<span title='".$date."'>". __("pulled", "git-branch-plugin") . " " . $time_elapsed . "</span>";
+	}
+
+
+	// http://stackoverflow.com/questions/1416697/converting-timestamp-to-time-ago-in-php-e-g-1-day-ago-2-days-ago
+	function time_elapsed_string($ptime)
+	{
+	    $etime = time() - $ptime;
+
+	    if ($etime < 1)
+	    {
+	        return '0 seconds';
+	    }
+
+	    $a = array( 365 * 24 * 60 * 60  =>  'year',
+	                 30 * 24 * 60 * 60  =>  'month',
+	                      24 * 60 * 60  =>  'day',
+	                           60 * 60  =>  'hour',
+	                                60  =>  'minute',
+	                                 1  =>  'second'
+	                );
+	    $a_plural = array( 'year'   => 'years',
+	                       'month'  => 'months',
+	                       'day'    => 'days',
+	                       'hour'   => 'hours',
+	                       'minute' => 'minutes',
+	                       'second' => 'seconds'
+	                );
+
+	    foreach ($a as $secs => $str)
+	    {
+	        $d = $etime / $secs;
+	        if ($d >= 1)
+	        {
+	            $r = round($d);
+	            return $r . ' ' . ($r > 1 ? $a_plural[$str] : $str) . ' ago';
+	        }
+	    }
+	}
+
+
 
 }
 
