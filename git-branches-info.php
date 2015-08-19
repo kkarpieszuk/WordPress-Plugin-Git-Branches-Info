@@ -28,13 +28,13 @@ class Git_Branches_Client {
 			if ($branch_name) {
 				$additional_infos[] = $this->branch_name_string($branch_name);
 			}
-		}
 
-		$git_fetch_head_file_time = $this->get_git_fetch_head_file_time( $plugin_file );
-		if ($git_fetch_head_file_time) {
-			$additional_infos[] = $this->file_time_string($git_fetch_head_file_time);
-		} else if ($git_fetch_head_file_time === null) {
-			$additional_infos[] = __("never pulled", "git-branch-plugin");
+			$git_fetch_head_file_time = $this->get_git_fetch_head_file_time( $plugin_file );
+			if ($git_fetch_head_file_time) {
+				$additional_infos[] = $this->file_time_string($git_fetch_head_file_time);
+			} else if ($git_fetch_head_file_time === null) {
+				$additional_infos[] = __("never pulled", "git-branch-plugin");
+			}
 		}
 
 		$plugin_meta = $this->add_branch_info_to_version($additional_infos, $plugin_meta);
