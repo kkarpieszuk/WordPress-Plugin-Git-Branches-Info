@@ -83,6 +83,10 @@ class Git_Branches_Client {
 	function git_directory_path( $plugin_name ) {
 		$plugin_name = WP_PLUGIN_DIR . DIRECTORY_SEPARATOR .$plugin_name;
 
+		if(PHP_OS == "Windows" || PHP_OS == "WINNT"){
+            $plugin_name = str_replace( "/" , DIRECTORY_SEPARATOR , $plugin_name );
+        }
+
 		$parts = explode(DIRECTORY_SEPARATOR, $plugin_name);
 		unset ( $parts[ count($parts) - 1 ] );
 
