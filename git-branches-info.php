@@ -137,7 +137,7 @@ class Git_Branches_Client {
 	function file_time_string($git_fetch_head_file_time) {
 		$time_elapsed = human_time_diff($git_fetch_head_file_time);
 		$date = date('l jS \of F Y h:i:s A', $git_fetch_head_file_time);
-		return "<span title='".$date."'>". __("pulled", "git-branch-plugin") . " " . $time_elapsed . "</span>";
+		return "<span title='".$date."'>". sprintf(__("pulled %s ago", "git-branch-plugin"), $time_elapsed) . "</span>";
 	}
 
 }
